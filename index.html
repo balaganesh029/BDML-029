@@ -1,0 +1,321 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Used Car Price Predictor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="header">
+        <div class="car-icon">🚗</div>
+        <h1>Used Car Price Predictor</h1>
+        <p>AI-powered estimation using two Machine Learning algorithms</p>
+    </div>
+
+    <form action="/predict" method="POST">
+
+        <div class="section-title">
+            <span>01</span>
+            Car Information
+        </div>
+
+        <div class="grid">
+
+            <div class="field">
+                <label>Brand</label>
+                <select name="brand" id="brand" required>
+                    <option value="">Select Brand</option>
+
+                    {% for brand in brands %}
+                    <option value="{{ brand }}"
+                        {% if selected_brand == brand %}selected{% endif %}>
+                        {{ brand }}
+                    </option>
+                    {% endfor %}
+
+                </select>
+            </div>
+
+            <div class="field">
+                <label>Model</label>
+                <select name="model" id="model" required>
+                    <option value="">Select Model</option>
+                </select>
+            </div>
+
+            <div class="field">
+                <label>Fuel Type</label>
+                <select name="fuel" required>
+                    <option value="">Select Fuel</option>
+
+                    {% for fuel in fuels %}
+                    <option value="{{ fuel }}">{{ fuel }}</option>
+                    {% endfor %}
+
+                </select>
+            </div>
+
+            <div class="field">
+                <label>Transmission</label>
+                <select name="transmission" required>
+                    <option value="">Select Transmission</option>
+
+                    {% for transmission in transmissions %}
+                    <option value="{{ transmission }}">
+                        {{ transmission }}
+                    </option>
+                    {% endfor %}
+
+                </select>
+            </div>
+
+            <div class="field">
+                <label>Year</label>
+                <input
+                    type="number"
+                    name="year"
+                    min="1990"
+                    max="2026"
+                    placeholder="Example: 2021"
+                    required
+                >
+            </div>
+
+            <div class="field">
+                <label>Kilometers Driven</label>
+                <input
+                    type="number"
+                    name="km_driven"
+                    min="0"
+                    placeholder="Example: 35000"
+                    required
+                >
+            </div>
+
+            <div class="field">
+                <label>Engine (CC)</label>
+                <input
+                    type="number"
+                    step="0.1"
+                    name="engine"
+                    min="500"
+                    placeholder="Example: 1497"
+                    required
+                >
+            </div>
+
+            <div class="field">
+                <label>Mileage (km/l)</label>
+                <input
+                    type="number"
+                    step="0.1"
+                    name="mileage"
+                    min="1"
+                    placeholder="Example: 17.4"
+                    required
+                >
+            </div>
+
+            <div class="field">
+                <label>Max Power (bhp)</label>
+                <input
+                    type="number"
+                    step="0.1"
+                    name="max_power"
+                    min="10"
+                    placeholder="Example: 113"
+                    required
+                >
+            </div>
+
+            <div class="field">
+                <label>Seats</label>
+                <select name="seats" required>
+                    <option value="">Select Seats</option>
+                    <option value="2">2</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                    <option value="6">6</option>
+                    <option value="7">7</option>
+                    <option value="8">8</option>
+                    <option value="9">9</option>
+                    <option value="10">10</option>
+                </select>
+            </div>
+
+            <div class="field">
+                <label>Previous Owner</label>
+                <select name="owner" required>
+                    <option value="">Select Owner</option>
+
+                    {% for owner in owners %}
+                    <option value="{{ owner }}">{{ owner }}</option>
+                    {% endfor %}
+
+                </select>
+            </div>
+
+        </div>
+
+        <button type="submit">
+            <span>🔍</span>
+            Predict Car Price
+        </button>
+
+    </form>
+
+
+    {% if predicted %}
+
+    <div class="results">
+
+        <div class="section-title">
+            <span>02</span>
+            Prediction Results
+        </div>
+
+        <div class="result-grid">
+
+            <div class="result-card">
+                <div class="model-name">
+                    Linear Regression
+                </div>
+
+                <div class="price">
+                    ₹{{ "{:,.0f}".format(linear_price) }}
+                </div>
+
+                <div class="model-description">
+                    Regression-based prediction
+                </div>
+            </div>
+
+
+            <div class="result-card">
+                <div class="model-name">
+                    Random Forest
+                </div>
+
+                <div class="price">
+                    ₹{{ "{:,.0f}".format(rf_price) }}
+                </div>
+
+                <div class="model-description">
+                    Ensemble-based prediction
+                </div>
+            </div>
+
+        </div>
+
+
+        <div class="final-result">
+
+            <div class="final-label">
+                ESTIMATED MARKET PRICE
+            </div>
+
+            <div class="final-price">
+                ₹{{ "{:,.0f}".format(final_price) }}
+            </div>
+
+            <div class="final-note">
+                Average prediction from both ML models
+            </div>
+
+        </div>
+
+    </div>
+
+    {% endif %}
+
+</div>
+
+
+<script>
+const brandSelect = document.getElementById("brand");
+const modelSelect = document.getElementById("model");
+
+async function loadModels(brand) {
+
+    modelSelect.innerHTML =
+        '<option value="">Loading models...</option>';
+
+    if (!brand) {
+        modelSelect.innerHTML =
+            '<option value="">Select Model</option>';
+        return;
+    }
+
+    try {
+
+        const url = "/models/" + encodeURIComponent(brand);
+
+        console.log("Loading models from:", url);
+
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error(
+                "Server returned " + response.status
+            );
+        }
+
+        const models = await response.json();
+
+        console.log("Models received:", models);
+
+        modelSelect.innerHTML =
+            '<option value="">Select Model</option>';
+
+        if (models.length === 0) {
+
+            modelSelect.innerHTML =
+                '<option value="">No models found</option>';
+
+            return;
+        }
+
+        models.forEach(function(model) {
+
+            const option =
+                document.createElement("option");
+
+            option.value = model;
+            option.textContent = model;
+
+            modelSelect.appendChild(option);
+        });
+
+    } catch (error) {
+
+        console.error("Model loading error:", error);
+
+        modelSelect.innerHTML =
+            '<option value="">Unable to load models</option>';
+    }
+}
+
+
+brandSelect.addEventListener("change", function() {
+
+    loadModels(this.value);
+
+});
+
+
+if (brandSelect.value) {
+
+    loadModels(brandSelect.value);
+
+}
+</script>
+
+</body>
+</html>
